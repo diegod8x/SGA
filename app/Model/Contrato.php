@@ -48,14 +48,14 @@ class Contrato extends AppModel
 			'conditions' => '',
 			'fields' => '',
 			'order' => ''
-		),
-		'FormaPago' => array(
-			'className' => 'FormaPago',
-			'foreignKey' => 'forma_pago_id',
-			'conditions' => '',
-			'fields' => '',
-			'order' => ''
-		)
+		) //,
+		// 'FormaPago' => array(
+		// 	'className' => 'FormaPago',
+		// 	'foreignKey' => 'forma_pago_id',
+		// 	'conditions' => '',
+		// 	'fields' => '',
+		// 	'order' => ''
+		// )
 	);
 
 	/**

@@ -35,71 +35,8 @@
 				<h4 class="col-md-offset-0" style="margin-bottom:10px">Pagos Pendientes</h4>
 			</div>
 			<div class="row">
-				<!--form class="form-horizontal" name="recaudacionesUpd" novalidate>
-				<div class="table-responsive ui-content" data-role="main">
-					<label>Buscar: <input ng-model="query"></label>
-					<table class="table table-condensed table-striped table-hover" id="searchTextResults">
-						<thead>
-							<tr>
-								<th class="text-center" width="55">#</th>
-								<th class="text-center col-md-2" data-priority="1"> Cliente</th>
-
-								<th class="text-center col-md-1" data-priority="1">FechaCobro</th>
-								<th class="text-center col-md-1" data-priority="2">Estado</th>
-								<th class="text-center col-md-1" data-priority="3">Mensualidad</th>
-								<th class="text-center col-md-1" data-priority="4">Descuento</th>
-								<th class="text-center col-md-1" data-priority="5">Despacho</th>
-								<th class="text-center col-md-1" data-priority="6">Total</th>
-								<th class="text-center" data-priority="7">Documento</th>
-								<th class="text-center" data-priority="8">&nbsp;&nbsp;Nº.Documento</th>
-								<th width="55"></th>
-								<th width="55"></th>
-							</tr>
-						</thead>
-						<tbody>
-							<tr ng-repeat="recaudacione in formulario.Recaudacione | filter:query" >
-								<td ng-model="formulario.Recaudacione[$index].contrato_id" width="50">
-									{{recaudacione.contrato_id}}</td>
-									{{contrato_id}}
-								<td ng-model="formulario.Recaudacione[$index].cliente_id" class="col-md-2">
-									<u><a data-toggle="modal" href="#" ng-click="verDetalle(formulario.Recaudacione[$index].contrato_id)">{{recaudacione.nombre_cliente}}</a></u>
-								</td>
-								<td ng-model="formulario.Recaudacione[$index].fecha_cobro" class="text-center col-md-1">
-									{{recaudacione.fecha_cobro}}</td>
-								<td class="text-center col-md-1"> {{recaudacione.ds_estado}} </td>
-								<td ng-model="formulario.Recaudacione[$index].subtotal" class="text-right col-md-1">
-									{{recaudacione.subtotal | number:0}}</td>
-								<td ng-model="formulario.Recaudacione[$index].descuento" class="text-right col-md-1">
-									{{recaudacione.descuento | number:0}}</td>
-								<td ng-model="formulario.Recaudacione[$index].despacho" class="text-right col-md-1">
-									{{recaudacione.despacho | number:0}}</td>
-								<td ng-model="formulario.Recaudacione[$index].total_cobrado" class="text-right col-md-1">
-									{{recaudacione.total_cobrado | number:0}}</td>
-								<td class="col-md-1">
-									<ui-select class="sube" name="docu-{{$index}}" ng-model="formulario.Recaudacione[$index].tipo_documento_id" style="width:105px">
-										<ui-select-match placeholder="Seleccione">
-											{{$select.selected.nombre}}
-										</ui-select-match>
-										<ui-select-choices repeat="docu.id as docu in datos.TipoDocumento | filter: $select.search">
-											<div ng-bind-html="docu.nombre | highlight: $select.search" ></div>
-										</ui-select-choices>
-									</ui-select>
-								</td>
-								<td width="135">
-									<div class="form-group col-md-12" style="margin-bottom:0px;width:120%">
-										<input type="text" class="form-control sube" name="nro-{{$index}}" placeholder="Nro. Documento" ng-model="formulario.Recaudacione[$index].nro_documento">
-									</div>
-								</td>
-								<td width="50">
-									<input class="checkgrande" type="checkbox" ng-model="formulario.Recaudacione[$index].estado" name="estado-{{$index}}" ng-true-value="1" ng-false-value="0" ng-checked="formulario.Recaudacione[$index].estado==1" ng-init="(formulario.Recaudacione[$index].estado==1)?estado=true:estado=false;" ng-disabled="estado" style="margin-bottom:2px">
-								</td>
-							</tr>
-						</tbody>
-					</table>
-				</div>
-				</form-->
 				<?php echo $this->element("botonera"); ?>
-				<div id="GridCustomId" ui-grid="gridOptions" ui-grid-edit="" ui-grid-cellnav="" ui-grid-selection ui-grid-exporter ng-model="grid" class="grid" style="height:400px;" ui-grid-auto-resize ui-grid-resize-columns></div>
+				<div id="GridCustomId" ui-grid="gridOptions" ui-grid-edit="" ui-grid-cellnav="" ng-model="MODEL_COL_FIELD" ui-grid-selection ui-grid-exporter class="grid ui-grid-selectable" style="height:400px;" ui-grid-auto-resize ui-grid-resize-columns></div>
 
 			</div>
 		</div>

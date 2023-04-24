@@ -1,3 +1,4 @@
+let tipoDocumentoData, formaPagoData;
 app.controller('recaudacionePagos', function ($scope, $http, recaudacioneService , serviciosService, contratosService, Flash, $filter, $window, $location, $rootScope, $anchorScroll, i18nService) {
     $scope.loader = true;
     $scope.cargador = loader;
@@ -5,7 +6,7 @@ app.controller('recaudacionePagos', function ($scope, $http, recaudacioneService
     var Recaudacione;
     $scope.formulario = {Recaudacione:{}};
     $scope.RecaudacioneOriginal;
-
+    $scope.msg = {};
     $scope.langs = i18nService.getAllLangs();
     $scope.lang = 'es';
     $scope.gridOptions = {
@@ -13,10 +14,11 @@ app.controller('recaudacionePagos', function ($scope, $http, recaudacioneService
         enableCellEditOnFocus: true,
         enableFiltering: false,
         useExternalFiltering: true,
-        flatEntityAccess: true,
+        //flatEntityAccess: true,
         showGridFooter: true,
         enableRowSelection: true,
         enableRowHeaderSelection: true,
+        enableHighlighting : true,
         multiSelect: false,
         enableSorting: true,
         enableGridMenu: true,
@@ -25,87 +27,109 @@ app.controller('recaudacionePagos', function ($scope, $http, recaudacioneService
         exporterCsvFilename: 'pagos_pendientes.csv',
         exporterCsvLinkElement: angular.element(document.querySelectorAll(".custom-csv-link-location")),
         rowTemplate: '<div><div ng-repeat="col in colContainer.renderedColumns track by col.colDef.name" class="ui-grid-cell" ui-grid-cell></div></div>',
-        /*onRegisterApi: function(gridApi){
+        onRegisterApi: function(gridApi){
             $scope.gridApi = gridApi;
+
             gridApi.edit.on.afterCellEdit($scope, function(rowEntity, colDef, newValue, oldValue) {
-              $scope.msg.lastCellEdited = 'edited row id:' + rowEntity.id + ' Column:' + colDef.name + ' newValue:' + newValue + ' oldValue:' + oldValue;
-              $scope.$apply();
+                $scope.msg.lastCellEdited = 'edited row id:' + rowEntity.id + ' Column:' + colDef.name + ' newValue:' + newValue + ' oldValue:' + oldValue;
+                $scope.$apply();
             });
-          }*/
+
+            let cellValue = "";
+            gridApi.cellNav.on.navigate($scope, function (newRowCol, oldRowCol) {
+                let name = newRowCol.col.name;
+                cellValue = newRowCol.row.entity[name];
+                //console.log('navigation event:' + cellValue);
+                if (name === "fecha_pago" && typeof cellValue === "string")
+                    newRowCol.row.entity[name] = new Date(cellValue);
+
+                $('.grid').on('keydown', function (e) {
+                    let tag = e.target.tagName.toLowerCase();
+                    e = e || window.event;
+                    let key = e.which || e.keyCode; // keyCode detection
+                    let ctrl = e.ctrlKey ? e.ctrlKey : ((key === 17) ? true : false); // ctrl detection
+
+                    if (key == 86 && ctrl) {
+                        //console.log("Ctrl + V Pressed !");
+                    } else if (key == 67 && ctrl) {
+                        let $temp = $("<input>");
+                        $("body").append($temp);
+                        $temp.val(cellValue).select();
+                        document.execCommand("copy");
+                        $temp.remove();
+                        //console.log("Ctrl + C Pressed !");
+                    }
+                })
+
+            });
+        }
     };
-    /* $scope.gridOptions = {
-        enableCellEditOnFocus: true,
-    };*/
+    /* $scope.gridOptions = { enableCellEditOnFocus: true };*/
     $scope.applyClass = function(grid, row, col, rowRenderIndex, colRenderIndex) {
         if (row.entity.ds_estado =='Pagado') {
             return 'disabledRow';
         }
     }
-    $scope.tipoDocumento = [ { id: 1, gender: 'Boleta' },
-            { id: 2, gender: 'Factura' },
-            { id: 3, gender: 'Recibo' }
-        ];
-
-    var numArray = [ { id: 1, tipo_documento_id: 'Boleta' },
-            { id: 2, tipo_documento_id: 'Factura' },
-            { id: 3, tipo_documento_id: 'Recibo' }
-        ];
-
-    $scope.gridOptions.columnDefs = [
-        { name: 'contrato_id', displayName: '#', minWidth: 130 ,  enableCellEdit: false, visible:false},
-        { name: 'nombre_cliente', displayName: 'Cliente', minWidth: 130,  enableCellEdit: false },
-        { name: 'fecha_cobro', displayName: 'Fecha Cobro', minWidth: 110 ,  enableCellEdit: false},
-        { name: 'ds_estado', displayName: 'Estado', minWidth: 100 ,  enableCellEdit: false},
-        { name: 'subtotal', displayName: 'Mensualidad', minWidth: 110 ,  enableCellEdit: false, cellTemplate: '<div style="text-align:right;"  class="ngCellText">{{row.entity.subtotal | number:0}}</div>'},
-        { name: 'descuento', displayName: 'Descuento', minWidth: 110 ,  enableCellEdit: false, cellTemplate: '<div style="text-align:right;"  class="ngCellText">{{row.entity.descuento | number:0}}</div>'},
-        { name: 'garantia', displayName: 'Garantía', minWidth: 110 ,  enableCellEdit: false, cellTemplate: '<div style="text-align:right;"  class="ngCellText">{{row.entity.garantia | number:0}}</div>'},
-        { name: 'despacho', displayName: 'Despacho', minWidth: 110 ,  enableCellEdit: false, cellTemplate: '<div style="text-align:right;"  class="ngCellText">{{row.entity.despacho | number:0}}</div>'},
-        { name: 'total_cobrado', displayName: 'Total', minWidth: 110 ,  enableCellEdit: false, cellTemplate: '<div style="text-align:right;"  class="ngCellText">{{row.entity.total_cobrado | number:0}}</div>'},
-        {   name: 'tipo_documento_id',
-            enableCellEdit: true,
-            displayName: 'Documento',
-            editableCellTemplate: 'ui-grid/dropdownEditor', //<i class="fa fa-edit"></i>
-            enableColumnMenu: false,
-            cellClass: 'cBlue',
-            cellFilter: 'mapGender',
-            headerCellClass: 'gridCustomId',
-            editDropdownValueLabel: 'tipo_documento_id',
-            editDropdownOptionsArray: [ { id: '1', tipo_documento_id: 'Boleta' },
-                                        { id: '2', tipo_documento_id: 'Factura' },
-                                        { id: '3', tipo_documento_id: 'Recibo' }],
-            width: 130
-        },
-        { name: 'nro_documento', displayName: 'Nº Documento', minWidth: 150, cellClass: 'cBlue',headerCellClass: 'gridCustomId', enableColumnMenu: false},
-        { name: 'fecha_pago', displayName: 'Fecha Pago', minWidth: 130,  enableCellEdit: true, type: 'date', cellFilter: 'date: \'yyyy-MM-dd\'' , cellClass: 'cBlue',headerCellClass: 'gridCustomId', enableColumnMenu: false},
-        { name: 'comentarios', displayName: 'Comentarios', minWidth: 150, cellClass: 'cBlue',headerCellClass: 'gridCustomId', enableColumnMenu: false},
-        { name: 'estado', displayName: 'Pagar',  enableCellEdit: false,cellTemplate: '<input ng-true-value="1" ng-false-value="0" type="checkbox" ng-model="row.entity.estado" ng-checked="row.entity.estado==1" ng-init="(row.entity.estado==1)?estado=true:estado=false;" ng-disabled="estado">' , minWidth: 70}
-        ];
-
-    $scope.msg = {};
-    $scope.msg2 = 'asdasd';
-
-    $scope.gridOptions.onRegisterApi = function(gridApi) {
-        //set gridApi on scope
-        $scope.gridApi = gridApi;
-        gridApi.edit.on.afterCellEdit($scope, function(rowEntity, colDef, newValue, oldValue) {
-            $scope.msg.lastCellEdited = 'edited row id:' + rowEntity.id + ' Column:' + colDef.name + ' newValue:' + newValue + ' oldValue:' + oldValue;
-        });
-        //$scope.$apply();
-    };
 
 
-    $scope.obtDatos = function(){
+    const loadTableColumnDefs = (tipoFormaPago, tipoDocumento) => {
+        $scope.gridOptions.columnDefs = [
+            { name: 'contrato_id', displayName: 'Contrato', minWidth: 70,  enableCellEdit: false},
+            { name: 'rut_cliente', displayName: 'Rut', minWidth: 95,  enableCellEdit: false },
+            { name: 'nombre_cliente', displayName: 'Cliente', minWidth: 140,  enableCellEdit: false },
+            { name: 'fecha_cobro', displayName: 'Fecha Cobro', minWidth: 100 ,  enableCellEdit: false},
+            { name: 'ds_estado', displayName: 'Estado', minWidth: 85,  enableCellEdit: false},
+            { name: 'dias_mora', displayName: 'Días Mora', minWidth: 75,  enableCellEdit: false, cellClass: 'cRed',},
+            { name: 'subtotal', displayName: 'Mensualidad', minWidth: 105 ,  enableCellEdit: false, cellTemplate: '<div style="text-align:right;"  class="ngCellText">{{row.entity.subtotal | number:0}}</div>'},
+            { name: 'descuento', displayName: 'Descuento', minWidth: 100,  enableCellEdit: false, cellTemplate: '<div style="text-align:right;"  class="ngCellText">{{row.entity.descuento | number:0}}</div>'},
+            { name: 'garantia', displayName: 'Garantía', minWidth: 94,  enableCellEdit: false, cellTemplate: '<div style="text-align:right;"  class="ngCellText">{{row.entity.garantia | number:0}}</div>'},
+            { name: 'despacho', displayName: 'Despacho', minWidth: 104,  enableCellEdit: false, cellTemplate: '<div style="text-align:right;"  class="ngCellText">{{row.entity.despacho | number:0}}</div>'},
+            { name: 'total_cobrado', displayName: 'Total', minWidth: 105 ,  enableCellEdit: false, cellTemplate: '<div style="text-align:right;"  class="ngCellText">{{row.entity.total_cobrado | number:0}}</div>'},
+            {   name: 'tipo_documento_id',
+                enableCellEdit: true,
+                displayName: 'Documento',
+                editableCellTemplate: 'ui-grid/dropdownEditor', //<i class="fa fa-edit"></i>
+                enableColumnMenu: false,
+                cellClass: 'cBlue',
+                cellFilter: 'mapTipoDoc',
+                headerCellClass: 'gridCustomId',
+                editDropdownValueLabel: 'tipo_documento_id',
+                editDropdownOptionsArray: tipoDocumento.map(o => { o.tipo_documento_id = o.nombre; delete o.nombre; return o; }),
+                width: 120
+            },
+            { name: 'nro_documento', displayName: 'Nº Documento', minWidth: 130, cellClass: 'cBlue',headerCellClass: 'gridCustomId', enableColumnMenu: false},
+            { name: 'fecha_pago', displayName: 'Fecha Pago', minWidth: 120,  enableCellEdit: true, type: 'date', cellFilter: 'date: \'yyyy-MM-dd\'', cellClass: 'cBlue',headerCellClass: 'gridCustomId', enableColumnMenu: false},
+            {   name: 'forma_pago_id',
+                enableCellEdit: true,
+                displayName: 'Forma Pago',
+                editableCellTemplate: 'ui-grid/dropdownEditor', //<i class="fa fa-edit"></i>
+                enableColumnMenu: false,
+                cellClass: 'cBlue',
+                cellFilter: 'mapFormaPago',
+                headerCellClass: 'gridCustomId',
+                editDropdownValueLabel: 'forma_pago_id',
+                editDropdownOptionsArray: tipoFormaPago.map(o => { o.forma_pago_id = o.nombre; delete o.nombre; return o; }),
+                width: 120
+            },
+            { name: 'comentarios', displayName: 'Comentarios', minWidth: 130, cellClass: 'cBlue',headerCellClass: 'gridCustomId', enableColumnMenu: false},
+            { name: 'estado', displayName: 'Pagar',  enableCellEdit: false,cellTemplate: '<input ng-true-value="1" ng-false-value="0" type="checkbox" ng-model="row.entity.estado" ng-checked="row.entity.estado==1" ng-init="(row.entity.estado==1)?estado=true:estado=false;" ng-disabled="estado">' , minWidth: 70}
+            ];
+    }
+
+    $scope.obtDatos = async function(){
         recaudacioneService.getCobros().success(function (data){
-            console.log(data);
-            console.log(data.Recaudacione.find(obj=>obj.contrato_id === "2390"))
-            var Recaudacione;
+            //console.log("data", data);
+            formaPagoData = data.FormaPago;
+            tipoDocumentoData = data.TipoDocumento;
+            loadTableColumnDefs(data.FormaPago, data.TipoDocumento);
             $scope.estado = false;
             $scope.datos = {};
-            $scope.formulario = {Recaudacione:{}};
+            $scope.formulario = { Recaudacione: {} };
             $scope.formulario.Recaudacione = data.Recaudacione;
             $scope.RecaudacioneOriginal = angular.copy(data.Recaudacione);
             $scope.gridOptions.data = data.Recaudacione;
             $scope.datos.TipoDocumento = data.TipoDocumento;
+            $scope.datos.FormaPago = data.FormaPago;
             $scope.datos.DiasVencimiento = data.DiasVencimiento;
             $scope.cuotas = data.cuotas;
             $scope.loader = false;
@@ -126,8 +150,10 @@ app.controller('recaudacionePagos', function ($scope, $http, recaudacioneService
                     $scope.boton = true;
                 else
                     $scope.boton = false;
-            });
 
+                //$scope.gridApi.grid.cellNav.clearFocus();
+            });
+            //$scope.gridApi.grid.cellNav.clearFocus();
 
             $scope.refreshData = function (termObj) {
                 $scope.gridOptions.data = data.Recaudacione;
@@ -144,11 +170,9 @@ app.controller('recaudacionePagos', function ($scope, $http, recaudacioneService
     $scope.close = function(dialog){
       angular.element("#"+dialog).modal("hide");
     };
-
     $scope.open = function(dialog){
       angular.element("#"+dialog).modal("show");
     };
-
     $scope.registrarPagos = function(){
         $scope.deshabilita = true;
         var modificados = [];
@@ -211,229 +235,25 @@ app.controller('recaudacionePagos', function ($scope, $http, recaudacioneService
     $scope.close = function(dialog){
       angular.element("#"+dialog).modal("hide");
     };
-
     $scope.open = function(dialog){
       angular.element("#"+dialog).modal("show");
     };
 })
-.filter('mapGender', function() {
-    var genderHash = {
-        1: 'Boleta',
-        2: 'Factura',
-        3: 'Recibo'
-    };
-    return function(input) {
-        if (!input){
-                return '';
-            } else {
-                return genderHash[input];
-            }
-    };
-});
-
-/*app.controller('recaudacionePagos', function ($scope, $http, recaudacioneService , serviciosService, contratosService, Flash, $filter, $window, $location, $rootScope, $anchorScroll, i18nService) {
-    $scope.loader = true;
-    $scope.cargador = loader;
-    $scope.formContratos = false;
-    var Recaudacione;
-    $scope.formulario = {Recaudacione:{}};
-
-    $scope.langs = i18nService.getAllLangs();
-    $scope.lang = 'es';
-    $scope.gridOptions = {
-        enableCellEdit: true,
-        enableCellEditOnFocus: true,
-        enableFiltering: false,
-        useExternalFiltering: true,
-        flatEntityAccess: true,
-        showGridFooter: true,
-        enableRowSelection: true,
-        enableRowHeaderSelection: true,
-        multiSelect: false,
-        enableSorting: true,
-        enableGridMenu: true,
-        exporterCsvColumnSeparator: ';',
-        exporterMenuPdf: false,
-        exporterCsvFilename: 'pagos_pendientes.csv',
-        exporterCsvLinkElement: angular.element(document.querySelectorAll(".custom-csv-link-location")),
-        rowTemplate: '<div><div ng-repeat="col in colContainer.renderedColumns track by col.colDef.name" class="ui-grid-cell" ui-grid-cell></div></div>',
-
-    };
-
-    $scope.applyClass = function(grid, row, col, rowRenderIndex, colRenderIndex) {
-        if (row.entity.ds_estado =='Pagado') {
-            return 'disabledRow';
-        }
+.filter('mapTipoDoc', () => {
+    let tipoDocHash = {};
+    for (const td of tipoDocumentoData) {
+        tipoDocHash[td.id] = td.tipo_documento_id;
     }
-    $scope.tipoDocumento = [ { id: 1, gender: 'Boleta' },
-            { id: 2, gender: 'Factura' },
-            { id: 3, gender: 'Recibo' }
-        ];
-
-    var numArray = [ { id: 1, tipo_documento_id: 'Boleta' },
-                                        { id: 2, tipo_documento_id: 'Factura' },
-                                        { id: 3, tipo_documento_id: 'Recibo' }
-                                    ];
-
-    console.log(numArray);
-
-    $scope.gridOptions.columnDefs = [
-        { name: 'contrato_id', displayName: '#', width: 130 ,  enableCellEdit: false, visible:false},
-        { name: 'nombre_cliente', displayName: 'Cliente', width: 130,  enableCellEdit: false },
-        { name: 'fecha_cobro', displayName: 'Fecha Cobro', width: 130 ,  enableCellEdit: false},
-        { name: 'ds_estado', displayName: 'Estado', width: 100 ,  enableCellEdit: false},
-        { name: 'subtotal', displayName: 'Mensualidad', width: 130 ,  enableCellEdit: false, cellTemplate: '<div style="text-align:right;"  class="ngCellText">{{row.entity.subtotal | number:0}}</div>'},
-        { name: 'descuento', displayName: 'Descuento', width: 130 ,  enableCellEdit: false, cellTemplate: '<div style="text-align:right;"  class="ngCellText">{{row.entity.descuento | number:0}}</div>'},
-        { name: 'despacho', displayName: 'Despacho', width: 130 ,  enableCellEdit: false, cellTemplate: '<div style="text-align:right;"  class="ngCellText">{{row.entity.despacho | number:0}}</div>'},
-        { name: 'total_cobrado', displayName: 'Total', width: 130 ,  enableCellEdit: false, cellTemplate: '<div style="text-align:right;"  class="ngCellText">{{row.entity.total_cobrado | number:0}}</div>'},
-        {   name: 'tipo_documento_id',
-            enableCellEdit: true,
-            displayName: 'Documento',
-            editableCellTemplate: 'ui-grid/dropdownEditor', //<i class="fa fa-edit"></i>
-            enableColumnMenu: false,
-            cellClass: 'cBlue',
-            cellFilter: 'mapGender',
-            headerCellClass: 'gridCustomId',
-            editDropdownValueLabel: 'tipo_documento_id',
-            editDropdownOptionsArray: [ { id: '1', tipo_documento_id: 'Boleta' },
-                                        { id: '2', tipo_documento_id: 'Factura' },
-                                        { id: '3', tipo_documento_id: 'Recibo' }],
-            width: 160
-        },
-        { name: 'nro_documento', displayName: 'Nº Documento', width: 160, cellClass: 'cBlue',headerCellClass: 'gridCustomId', enableColumnMenu: false},
-        { name: 'estado', displayName: 'Pagar',  enableCellEdit: false,cellTemplate: '<input ng-true-value="1" ng-false-value="0" type="checkbox" ng-model="row.entity.estado" ng-checked="row.entity.estado==1" ng-init="(row.entity.estado==1)?estado=true:estado=false;" ng-disabled="estado">' , width: 70}
-        ];
-
-
-    $scope.msg = {};
-    $scope.msg2 = 'asdasd';
-
-    $scope.gridOptions.onRegisterApi = function(gridApi) {
-        $scope.gridApi = gridApi;
-        gridApi.edit.on.afterCellEdit($scope, function(rowEntity, colDef, newValue, oldValue) {
-            $scope.msg.lastCellEdited = 'edited row id:' + rowEntity.id + ' Column:' + colDef.name + ' newValue:' + newValue + ' oldValue:' + oldValue;
-            $scope.$apply();
-        });
-    };
-
-
-    $scope.obtDatos = function(){
-        recaudacioneService.getCobros().success(function (data){
-            console.log(data);
-            var Recaudacione;
-            $scope.estado = false;
-            $scope.datos = {};
-            $scope.formulario = {Recaudacione:{}};
-            $scope.formulario.Recaudacione = data.Recaudacione;
-            $scope.gridOptions.data = data.Recaudacione;
-            $scope.datos.TipoDocumento = data.TipoDocumento;
-            $scope.datos.DiasVencimiento = data.DiasVencimiento;
-            $scope.cuotas = data.cuotas;
-            $scope.loader = false;
-            $scope.formPagos = true;
-            $scope.showCuotas = false;
-            $scope.gridApi.selection.on.rowSelectionChanged($scope,function(row){
-                $scope.btnrecaudacionessave = true;
-                if(angular.isDefined(row.entity.id))
-                {
-                    $scope.btnrecaudacionesview = false;
-                }
-                else
-                {
-                    $scope.btnrecaudacionesview = true;
-                }
-                $scope.id = row.entity.id;
-                if(row.isSelected == true)
-                    $scope.boton = true;
-                else
-                    $scope.boton = false;
-        });
-
-            $scope.refreshData = function (termObj) {
-                $scope.gridOptions.data = data.Recaudacione;
-                while (termObj) {
-                    var oSearchArray = termObj.split(' ');
-                    $scope.gridOptions.data = $filter('filter')($scope.gridOptions.data, oSearchArray[0], undefined);
-                    oSearchArray.shift();
-                    termObj = (oSearchArray.length !== 0) ? oSearchArray.join(' ') : '';
-                }
-            };
-        });
-    };
-
-    $scope.close = function(dialog){
-      angular.element("#"+dialog).modal("hide");
-    };
-
-    $scope.open = function(dialog){
-      angular.element("#"+dialog).modal("show");
-    };
-
-    $scope.registrarPagos = function(){
-        $scope.deshabilita = true;
-        angular.forEach($scope.formulario.Recaudacione, function(valor, pos){
-                if(valor.estado==1){
-                    var d = new Date();
-                    var n = d.toISOString();
-                    $scope.formulario.Recaudacione[pos].fecha_pago = n.slice(0, 10);
-                    $scope.formulario.Recaudacione[pos].total_pagado = $scope.formulario.Recaudacione[pos].total_cobrado;
-                }
-            });
-        recaudacioneService.registrarPagos($scope.formulario).success(function(data){
-
-            if(data.estado==1){
-                Flash.create('success', data.mensaje, 'customAlert');
-                $window.location = host+'recaudaciones';
-            }else if(data.estado==0){
-                Flash.create('danger', data.mensaje, 'customAlert');
-            }
-        });
-    };
-    $scope.verDetalle = function(idContrato){
-        contratosService.getContrato(idContrato).success(function (data){
-            $scope.open("detalle");
-            $scope.detalle = data.data;
-            $scope.detalle.Contrato.fecha_inicio = data.data.Contrato.fecha_inicio.split("-").reverse().join("-");
-            $scope.productos = data.listadoProductos;
-
-            if(angular.isDefined($scope.detalle.Contrato.numero_cuota_id)){
-                angular.forEach($scope.cuotas, function(numCuota){
-                    if( numCuota.id == $scope.detalle.Contrato.numero_cuota_id)
-                        $scope.numeroCuota = numCuota.numero;
-                });
-                $scope.detalle.Contrato.valor_cuota = Math.round( (Number($scope.detalle.Contrato.precio_total) / Number($scope.numeroCuota)) * 100)/100;
-            }
-
-            if($scope.detalle.Contrato.tipo_contrato_id == 2){
-                $scope.showCuotas = true;
-            }else{
-                $scope.showCuotas = false;
-            }
-        });
-    };
-    $scope.close = function(dialog){
-      angular.element("#"+dialog).modal("hide");
-    };
-
-    $scope.open = function(dialog){
-      angular.element("#"+dialog).modal("show");
-    };
+    return (input) => !input ? '' : tipoDocHash[input];
 })
-.filter('mapGender', function() {
-    var genderHash = {
-        1: 'Boleta',
-        2: 'Factura',
-        3: 'Recibo'
-    };
-    return function(input) {
-        if (!input){
-                return '';
-            } else {
-                return genderHash[input];
-            }
-    };
+.filter('mapFormaPago', () => {
+    let formaPagoHash = {};
+    for (const fp of formaPagoData) {
+        formaPagoHash[fp.id] = fp.forma_pago_id;
+    }
+    return (input) => !input ? '' : formaPagoHash[input];
 });
-*/
+
 app.controller('recaudacioneHistorico',  ['$scope', '$rootScope','$http', '$filter', '$location', 'uiGridConstants','i18nService', '$log', function ($scope, $rootScope, $http, $filter, $location, uiGridConstants, i18nService, $log) {
     $scope.loader = true;
     $scope.tablaDetalle = false;

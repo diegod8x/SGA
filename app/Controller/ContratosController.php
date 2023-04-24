@@ -129,7 +129,7 @@ class ContratosController extends AppController
 				if (isset($contrato["Cliente"]["email3"]) && trim($contrato["Cliente"]["email3"]) != '') {
 					$correosCliente[] = $contrato["Cliente"]["email3"];
 				}
-
+				//$correosCliente = NULL;
 				if (!empty($correosCliente)) {
 					$Email = new CakeEmail("gmail");
 					$Email->from(array('info@camas.cl' => 'camas.cl'));
@@ -157,6 +157,7 @@ class ContratosController extends AppController
 						);
 					}
 				} else {
+					// TODO revisar si controller JS muestra bien mensaje de exito sin correo.
 					$respuesta = array(
 						"estado" => 1,
 						"mensaje" => "Contrato guardado, pero no se pudo enviar correo.",
@@ -436,7 +437,7 @@ class ContratosController extends AppController
 		$contratoModel = ClassRegistry::init('Contrato');
 		$contratoModel->unbindModel(array('hasMany' => array('Actividade')));
 		$contratoModel->unbindModel(array('belongsTo' => array('NumeroCuota')));
-		$contratoModel->unbindModel(array('belongsTo' => array('FormaPago')));
+		//$contratoModel->unbindModel(array('belongsTo' => array('FormaPago')));
 		$contratoModel->unbindModel(array('hasMany' => array('ContratosProducto')));
 
 		$contratos = $this->Contrato->find("all", array(

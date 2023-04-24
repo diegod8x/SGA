@@ -24,16 +24,19 @@ class RecaudacionesController extends AppController
 	public function index()
 	{
 		AppController::controlAcceso();
-		$this->layout = "angular";
+		$this->layout = "angular_full";
 	}
 	public function index_json()
 	{
 		$this->layout = "ajax";
 		$this->response->type('json');
+		//$recaudacioneModel = ClassRegistry::init('Recaudacione');
 		$this->loadModel("TipoDocumento");
 		$this->loadModel("TipoContrato");
 		$this->loadModel("Condicione");
 		$this->loadModel("NumeroCuota");
+		$this->loadModel("FormaPago");
+		//$recaudacioneModel->unbindModel(array('belongsTo' => array('FormaPago')));
 
 		$nroCuotas = $this->NumeroCuota->find('all', array(
 			"fields" => array("NumeroCuota.id", "NumeroCuota.numero"),
@@ -45,16 +48,18 @@ class RecaudacionesController extends AppController
 		$lstPagos = array();
 		$tipoContratos = $this->TipoContrato->find("list", array("fields" => array("TipoContrato.nombre")));
 		$diasVencimiento = $this->Condicione->find("list", array("fields" => array("Condicione.valor_inicio"), "conditions" => array("Condicione.id" => 1)));
-
 		$listadoPagos = $this->Recaudacione->find("all", array("conditions" => array("Recaudacione.fecha_cobro <=" => date("Y-m-d")), "recursive" => 1));
 
 		foreach ($listadoPagos as $pago) {
 			$vencimiento = date('Y-m-d', strtotime($pago["Recaudacione"]["fecha_cobro"] . ' + ' . intval($diasVencimiento[1]) . " days"));
 			$pago["Recaudacione"]["nombre_cliente"] = $pago["Cliente"]["nombre"];
+			$pago["Recaudacione"]["rut_cliente"] = $pago["Cliente"]["rut"];
 			$pago["Recaudacione"]["tipo_contrato"] = $tipoContratos[$pago["Contrato"]["tipo_contrato_id"]];
+			//$pago["Recaudacione"]["forma_pago"] = $pago["Recaudacione"]["forma_pago_id"] ? $tipoFormaPago[$pago["Recaudacione"]["forma_pago_id"]] : $pago["Recaudacione"]["forma_pago_id"];
 			$pago["Recaudacione"]["tipo_contrato_id"] = $pago["Contrato"]["tipo_contrato_id"];
 			$pago["Recaudacione"]["ds_estado"] = ($pago["Recaudacione"]["estado"] == 1) ? 'Pagado' : (($vencimiento < date("Y-m-d")) ? "Adeudado" : "Pendiente");
 			$pago["Recaudacione"]["fecha_vencimiento"] = $vencimiento;
+			$pago["Recaudacione"]["dias_mora"] = ($pago["Recaudacione"]["estado"] == 1) ? '' : (($vencimiento < date("Y-m-d")) ? $this->diferenciaDias($vencimiento) : "");
 			$lstPagos[] = $pago["Recaudacione"];
 		}
 
@@ -62,14 +67,27 @@ class RecaudacionesController extends AppController
 		foreach ($tipoDocumentos as $value) {
 			$tipoDocumento[] = $value["TipoDocumento"];
 		}
+		$tipoFormaPagos = $this->FormaPago->find("all", array("recursive" => -1));
+		foreach ($tipoFormaPagos as $value) {
+			$tipoFormaPago[] = $value["FormaPago"];
+		}
 
 		$respuesta = array_merge(
-			array("Recaudacione" => $lstPagos),
 			array("TipoDocumento" => $tipoDocumento),
+			array("FormaPago" => $tipoFormaPago),
 			array("DiasVencimiento" => intval($diasVencimiento[1])),
-			array("cuotas" => $cuotas)
+			array("cuotas" => $cuotas),
+			array("Recaudacione" => $lstPagos)
 		);
 		$this->set('pagos', $respuesta);
+	}
+
+	function diferenciaDias($fecha)
+	{
+		$hoy = time();
+		$fechaVencimiento = strtotime($fecha);
+		$datediff = $hoy - $fechaVencimiento;
+		return round($datediff / (60 * 60 * 24));
 	}
 
 	/**
@@ -292,15 +310,17 @@ class RecaudacionesController extends AppController
 		$date = new DateTime();
 		$date->setTimezone($timeZome);
 
+		//pr($date->format("d"));
+		//pr($date->format("j"));
 		$contratos = $this->Contrato->find('all', array(
 			"conditions" => array(
 				"Contrato.fecha_cobro IN" => array($date->format("d"), $date->format("j")),
 				"Contrato.estado" => 1,
-				//"Contrato.id IN" => array(7565, 7566, 7567)
+				//				"Contrato.id IN" => array(8923)
 			),
 			"recursive" => -1
 		));
-
+		//pr($contratos);
 		$pagosDelDia = $this->Recaudacione->find(
 			"list",
 			array(
@@ -333,17 +353,23 @@ class RecaudacionesController extends AppController
 
 					// Garantia
 					$totalCobrado = $totalCobrado + $contrato["Contrato"]["garantia"];
-
+					//pr($nroCuotas[$contrato["Contrato"]["numero_cuota_id"]]);
 					for ($i = 1; $i < $nroCuotas[$contrato["Contrato"]["numero_cuota_id"]]; $i++) {
-
+						//pr("entra");
 						if (($contrato["Contrato"]["fecha_cobro"] <= $date->format("d") || $contrato["Contrato"]["fecha_cobro"] <= $date->format("j")) && $i == 1) {
+							//pr("cuota1");
 							// Cuota 1
 							$montoCuota = round($totalCobrado / $nroCuotas[$contrato["Contrato"]["numero_cuota_id"]]);
+							//pr($montoCuota);
+							//exit;
 						} else {
+							//pr("cuota sig");
 							// Cuotas siguientes
 							$time = strtotime((string) $mesCobroCuota . '-01');
 							$mesCobroCuota = date("Y-m", strtotime("+1 month", $time));
 							$montoCuota = round($totalCobrado / $nroCuotas[$contrato["Contrato"]["numero_cuota_id"]]);
+							//pr($montoCuota);
+							//exit;
 						}
 
 						$fechaCobroCuota = $mesCobroCuota . "-" . $contrato["Contrato"]["fecha_cobro"];
@@ -369,7 +395,7 @@ class RecaudacionesController extends AppController
 								"comentarios" 			=> "Cuota " . $i . "/" . $nroCuotas[$contrato["Contrato"]["numero_cuota_id"]],
 							);
 					}
-
+					//pr("última cuota");
 					// Última cuota
 					$time = strtotime($mesCobroCuota . '-01');
 					if ($nroCuotas[$contrato["Contrato"]["numero_cuota_id"]] > 1) {
@@ -378,7 +404,8 @@ class RecaudacionesController extends AppController
 
 					$fechaCobroCuota = $mesCobroCuota . "-" . $contrato["Contrato"]["fecha_cobro"];
 					$montoCuota = $totalCobrado - $acumulado;
-
+					//pr("termina");
+					//exit;
 					if (!in_array($contrato["Contrato"]["id"], $pagosDelDia)) {
 						$listadoContratos[] = array(
 							"contrato_id" 			=> $contrato["Contrato"]["id"],
@@ -400,6 +427,8 @@ class RecaudacionesController extends AppController
 						);
 					}
 				} else {
+					//pr("contrato venta");
+					//exit;
 					// Arriendo
 					if (!empty($contrato)) {
 
@@ -522,7 +551,8 @@ class RecaudacionesController extends AppController
 			"order" => "HistoricoPago.id DESC",
 			"recursive" => 0
 		));
-
+		// pr($listadoPagos);
+		// exit;
 		$listadoHistorico = array();
 		if (!empty($listadoPagos))
 			foreach ($listadoPagos as $pago) {
@@ -538,6 +568,7 @@ class RecaudacionesController extends AppController
 					"contrato_id" => intval($pago["HistoricoPago"]["contrato_id"]),
 					"tipo_contrato" => $tipoContratos[$pago["Contrato"]["tipo_contrato_id"]],
 					"tipo_documento" => $pago["TipoDocumento"]["nombre"],
+					//"forma_pago" => $pago["FormaPago"]["nombre"],
 					"ds_estado" => $pago["HistoricoPago"]["estado"] == 1 ? 'Pagado' : 'Adeudado'
 				));
 			}
@@ -550,6 +581,7 @@ class RecaudacionesController extends AppController
 		//$this->layout = "ajax";
 		//$this->response->type('json');
 		$this->loadModel("TipoDocumento");
+		$this->loadModel("FormaPago");
 		$this->loadModel("TipoContrato");
 		$this->loadModel("Condicione");
 
@@ -560,7 +592,7 @@ class RecaudacionesController extends AppController
 
 		$lstPagos = array();
 		$tipoContratos = $this->TipoContrato->find("list", array("fields" => array("TipoContrato.nombre")));
-
+		$tipoFormaPago = $this->FormaPago->find("list", array("fields" => array("FormaPago.nombre")));
 		$diasVencimiento = $this->Condicione->find("list", array("fields" => array("Condicione.valor_inicio"), "conditions" => array("Condicione.id" => 1)));
 
 		$listadoPagos = $this->Recaudacione->find("all", array(
@@ -572,11 +604,14 @@ class RecaudacionesController extends AppController
 		));
 
 		foreach ($listadoPagos as $pago) {
+			// pr($pago);
+			// exit;
 			$vencimiento = date('Y-m-d', strtotime($pago["Recaudacione"]["fecha_cobro"] . ' + ' . intval($diasVencimiento[1]) . ' days'));
 			$pago["Recaudacione"]["nombre_cliente"] = $pago["Cliente"]["nombre"];
 			$pago["Recaudacione"]["tipo_contrato"] = $tipoContratos[$pago["Contrato"]["tipo_contrato_id"]];
 			$pago["Recaudacione"]["tipo_contrato_id"] = $pago["Contrato"]["tipo_contrato_id"];
 			$pago["Recaudacione"]["tipo_documento"] = $pago["Recaudacione"]["tipo_documento_id"] ? $tipoDocumento[$pago["Recaudacione"]["tipo_documento_id"]] : '';
+			$pago["Recaudacione"]["forma_pago"] = $pago["Recaudacione"]["forma_pago_id"] ? $tipoFormaPago[$pago["Recaudacione"]["forma_pago_id"]] : '';
 			$pago["Recaudacione"]["ds_estado"] = ($pago["Recaudacione"]["estado"] == 1) ? 'Pagado' : (($vencimiento < date("Y-m-d")) ? 'Adeudado' : 'Pendiente');
 			$pago["Recaudacione"]["fecha_vencimiento"] = $vencimiento;
 			$lstPagos[] = $pago["Recaudacione"];

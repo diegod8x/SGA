@@ -465,6 +465,11 @@ app.controller("reporteClientes", [
 				{ name: "fecha_cobro", displayName: "Fecha cobro", minWidth: 130 },
 				{ name: "fecha_pago", displayName: "Fecha pago", minWidth: 110 },
 				{
+					name: "forma_pago",
+					displayName: "Forma pago",
+					minWidth: 110,
+				},
+				{
 					name: "tipo_documento",
 					displayName: "Tipo documento",
 					minWidth: 110,
