@@ -150,6 +150,8 @@ app.controller(
 		$scope.loader = true;
 		$scope.cargador = loader;
 		$scope.formContratos = false;
+		$scope.fechaPrimerCobro = '';
+		$scope.adv = false;
 
 		$scope.limitTitleSearch = 200;
 		$scope.checkTitle = function (lettersTyped) {
@@ -225,8 +227,19 @@ app.controller(
 			);
 
 			$scope.$watch("formulario.Contrato.fecha_cobro", function (anterior) {
-				if (angular.isDefined(anterior))
+				console.log("watch")
+				if (angular.isDefined(anterior)){
 					if (anterior > 28) $scope.formulario.Contrato.fecha_cobro = "";
+
+					const dt = new Date();
+					$scope.fechaPrimerCobro = $scope.formulario.Contrato.fecha_cobro + "/" + (dt.getMonth() + 1) + "/" + dt.getFullYear();
+					if (parseInt($scope.formulario.Contrato.fecha_cobro, 10) < dt.getDate()) {
+						$scope.adv = true;
+						$scope.fechaPrimerCobro = $scope.formulario.Contrato.fecha_cobro + "/" + (dt.getMonth() + 2) + "/" + dt.getFullYear();
+					} else {
+						$scope.adv = false;
+					}
+				}
 			});
 
 			$scope.$watchGroup(

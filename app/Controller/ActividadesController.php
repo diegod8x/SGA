@@ -111,9 +111,9 @@ class ActividadesController extends AppController
 
 				$actividad["ProductoEntrega"] = $productosEntrega;
 				$Email = new CakeEmail("gmail");
-				$Email->from(array('info@camas.cl' => 'SGA'));
+				//$Email->from(array('info@camas.cl' => 'SGA'));
 				$Email->to($trabajador["Trabajadore"]["email"]); //datosCorreo["email"]
-				$Email->cc('actividades@camas.cl');
+				//$Email->cc('actividades@camas.cl');
 				//$Email->to('diego.leopoldo.diaz@gmail.com');
 				$Email->subject("Nuevo comentario en Actividad");
 				$Email->emailFormat('html');
@@ -183,9 +183,9 @@ class ActividadesController extends AppController
 
 				$actividad["ProductoEntrega"] = $productosEntrega;
 				$Email = new CakeEmail("gmail");
-				$Email->from(array('info@camas.cl' => 'SGA'));
+				//$Email->from(array('info@camas.cl' => 'SGA'));
 				$Email->to($trabajador["Trabajadore"]["email"]); //datosCorreo["email"]
-				$Email->cc('actividades@camas.cl');
+				//$Email->cc('actividades@camas.cl');
 				//$Email->to('diego.leopoldo.diaz@gmail.com');
 				$Email->subject("Nueva Actividad del tipo " . $actividad["TipoActividade"]["nombre"]);
 				$Email->emailFormat('html');

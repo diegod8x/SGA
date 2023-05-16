@@ -1,3 +1,52 @@
+<style>
+	.popover-content,
+	.tooltip-inner {
+		width: 200px;
+	}
+
+	div.form-group {
+		position: relative;
+	}
+
+	div.form-group input~i.fa {
+		position: absolute;
+		right: -30px;
+		bottom: 8px;
+		font-size: 1.6em;
+
+	}
+
+	.tooltip.right {
+		margin-top: 10px !important;
+		margin-left: 8px;
+	}
+
+	.tooltip.right .tooltip-arrow {
+		border-right-color: #428bca;
+	}
+
+	.tooltip-inner {
+		max-width: 125px;
+		/* If max-width does not work, try using width instead */
+		width: 125px !important;
+		min-height: 85px;
+		text-align: left;
+		background-color: #428bca;
+		font-size: 13.5px;
+	}
+
+	.tooltip-arrow {
+		margin-top: -15px !important;
+	}
+
+	.tooltip {
+		margin-top: 5px;
+	}
+
+	.tooltip.show p {
+   text-align:left;
+ }
+</style>
 <div ng-controller="contratosAdd" ng-init="obtDatos()">
 	<p ng-bind-html="cargador" ng-show="loader"></p>
 	<div ng-show="formContratos">
@@ -34,7 +83,7 @@
 						</div>
 
 						<div calss="form-inline">
-							<a href="<?php echo $this->Html->url(array('controller' => 'clientes', "action" => "add")) ?>" target="_blank" class="btn btn-primary tool" data-toggle="tooltip" data-placement="top" title="Ingresar cliente">
+							<a href="<?php echo $this->Html->url(array('controller' => 'clientes', "action" => "add")) ?>" target="_blank" class="btn btn-primary " data-toggle="tooltip" data-placement="top" title="Ingresar cliente">
 								<i class="fa fa-plus"></i>
 							</a>
 						</div>
@@ -51,25 +100,45 @@
 								</ui-select-choices>
 							</ui-select>
 						</div>
-						<div calss="form-inline">
-							<a href="<?php echo $this->Html->url(array('controller' => 'direcciones', "action" => "add")) ?>/{{formulario.Contrato.cliente_id}}" target="_blank" class="btn btn-primary tool" data-toggle="tooltip" data-placement="top" title="Ingresar dirección">
+						<div class="form-inline">
+							<a href="<?php echo $this->Html->url(array('controller' => 'direcciones', "action" => "add")) ?>/{{formulario.Contrato.cliente_id}}" target="_blank" class="btn btn-primary " data-placement="top" title="Ingresar dirección">
 								<i class="fa fa-plus"></i>
 							</a>
 						</div>
 					</div>
 					<div class="form-group">
 						<label class="col-md-3 control-label baja">Fecha Inicio</label>
-						<div class="col-md-7">
+						<div class="form-inline col-md-7">
 							<div class="input">
 								<input class="form-control datepicker readonly-pointer-background" readonly="readonly" id="fechaInicio" name="fechaInicio" ng-model="formulario.Contrato.fecha_inicio" placeholder="Seleccione fecha" style="padding-left: 12px;" required>
 							</div>
 						</div>
 					</div>
 
-					<div class="form-group">
+					<!-- <div class="form-group">
 						<label class="control-label  col-md-3 baja">Día Cobranza</label>
-						<div class=" col-md-7">
+						<div class="col-md-9">
+							<div class="col-md-9" style="padding-left:0 !important	">
+								<input type="text" number-format decimals="0" negative="false" min="1" max="28" name="Cobranza" class="form-control toolvisible" ng-model="formulario.Contrato.fecha_cobro" data-toggle="tooltip" data-placement="right" title="El primer cobro se hara el día {{formulario.Contrato.fecha_cobro}}" tooltip-placement="auto">
+							</div>
+						</div>
+					</div> -->
+
+					<div class="form-group" style="margin-bottom: 0px;" ng-class="{ 'has-error': (formulario.Contrato.fecha_cobro < 1) }">
+						<label class="control-label  col-md-3 baja">Día Cobranza</label>
+						<div class="col-md-7">
 							<input type="text" number-format decimals="0" negative="false" min="1" max="28" name="Cobranza" class="form-control" ng-model="formulario.Contrato.fecha_cobro">
+						</div>
+						<div class="form-inline baja">
+							<i class="fa fa-question-circle toolvisible baja" style="margin-top: 8px;font-size: 17px;" data-toggle="tooltip" data-placement="right" title="La fecha de cobro del primer pago será el día <strong>{{fechaPrimerCobro}}</strong>." data-html="true"></i>
+						</div>
+					</div>
+					<div class="form-group">
+						<label class="col-md-3 control-label baja"></label>
+						<div class="form-inline col-md-7">
+							<div class="input" >
+							<small id="diaCobranza" ng-class="{ 'hide': !adv }"  class="form-text text-muted">Si ingresa un día de cobro menor al actual, el primer pago se hará desde el próximo mes.</small>
+							</div>
 						</div>
 					</div>
 
@@ -359,4 +428,8 @@ echo $this->Html->script(array(
 ?>
 <script>
 	$('.tool').tooltip();
+	$('.toolvisible').tooltip({
+		placement: 'right',
+		trigger: 'manual'
+	}).tooltip('show');
 </script>

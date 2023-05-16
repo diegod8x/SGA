@@ -7,16 +7,17 @@ App::uses('AppModel', 'Model');
  * @property Cliente $Cliente
  * @property TipoDocumento $TipoDocumento
  */
-class HistoricoPago extends AppModel {
+class HistoricoPago extends AppModel
+{
 
 
 	// The Associations below have been created with all possible keys, those that are not needed can be removed
 
-/**
- * belongsTo associations
- *
- * @var array
- */
+	/**
+	 * belongsTo associations
+	 *
+	 * @var array
+	 */
 	public $belongsTo = array(
 		'Contrato' => array(
 			'className' => 'Contrato',
@@ -35,6 +36,13 @@ class HistoricoPago extends AppModel {
 		'TipoDocumento' => array(
 			'className' => 'TipoDocumento',
 			'foreignKey' => 'tipo_documento_id',
+			'conditions' => '',
+			'fields' => '',
+			'order' => ''
+		),
+		'FormaPago' => array(
+			'className' => 'FormaPago',
+			'foreignKey' => 'forma_pago_id',
 			'conditions' => '',
 			'fields' => '',
 			'order' => ''

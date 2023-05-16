@@ -292,9 +292,11 @@ class ClientesController extends AppController
 			$recaudacion = $recaudacionService->recauda_cliente_json($clienteContratos["Cliente"]["id"]);
 			//pagos
 			$pagos = $recaudacionService->pagos_cliente_json($clienteContratos["Cliente"]["id"]);
-
 			/* parche temporal por descuadre de cron */
 			$cobrosPagosFix = [];
+			//pr($pagos);
+			// pr($recaudacion);
+			// exit;
 			if (!empty($pagos))
 				foreach ($pagos as $pago) {
 					$cobrosPagosFix[$pago["fecha_cobro"] . '-' . $pago["contrato_id"] . '' . $pago["total_cobrado"]] = $pago;

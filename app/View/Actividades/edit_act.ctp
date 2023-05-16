@@ -60,7 +60,7 @@
 							</ui-select>
 						</div>
 					</div>
-					{{formulario}}
+
 					<div class="form-group" ng-class="{ 'has-error': !actividadesEdit.Observaciones.$valid }">
 						<label class="col-md-3 control-label baja">Observaciones</label>
 						<div class="col-md-6">

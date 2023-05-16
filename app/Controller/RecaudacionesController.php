@@ -292,6 +292,9 @@ class RecaudacionesController extends AppController
 	}
 
 
+	/**
+	 *
+	 */
 	public function add_cobranza()
 	{
 
@@ -310,17 +313,17 @@ class RecaudacionesController extends AppController
 		$date = new DateTime();
 		$date->setTimezone($timeZome);
 
-		//pr($date->format("d"));
-		//pr($date->format("j"));
 		$contratos = $this->Contrato->find('all', array(
 			"conditions" => array(
 				"Contrato.fecha_cobro IN" => array($date->format("d"), $date->format("j")),
 				"Contrato.estado" => 1,
+				"Contrato.tipo_contrato_id" => 1
 				//				"Contrato.id IN" => array(8923)
 			),
 			"recursive" => -1
 		));
-		//pr($contratos);
+
+		// Pagos pendientes por cobrar del día
 		$pagosDelDia = $this->Recaudacione->find(
 			"list",
 			array(
@@ -340,7 +343,7 @@ class RecaudacionesController extends AppController
 				$mesCobroCuota = date("Y-m");
 				$nroCuotas = $this->NumeroCuota->find("list");
 
-				if ($contrato["Contrato"]["tipo_contrato_id"] == 2) {	// Venta
+				if ($contrato["Contrato"]["tipo_contrato_id"] == 2) {	// Venta eliminado para grabar nuevos pendientes
 					$totalCobrado = $contrato["Contrato"]["subtotal"];
 					// Primeras cuotas / total menos ultima
 					if ($contrato["Contrato"]["cobrar_despacho"] == 1) {
@@ -427,9 +430,10 @@ class RecaudacionesController extends AppController
 						);
 					}
 				} else {
-					//pr("contrato venta");
-					//exit;
-					// Arriendo
+					// pr("contrato arriendo");
+					// exit;
+					// Contratos se arriendo
+					// Genera mensualidades
 					if (!empty($contrato)) {
 
 						$mesCobroCuota = date("Y-m");
@@ -465,28 +469,31 @@ class RecaudacionesController extends AppController
 								"comentarios"			=> $comentarios,
 							);
 						}
+						// pr($listadoContratos);
+						// exit;
 					}
 				}
 				// fin cuotas
 			}
 		}
 
-		// Guarda datos
+		// Guarda pagos pendientes
 		if (!empty($listadoContratos)) {
 			$this->Recaudacione->saveAll($listadoContratos);
 		}
 
+		// Recupera pagos realizados
 		$registrosPagados = $this->Recaudacione->find("all", array("conditions" => array("Recaudacione.estado" => 1), "recursive" => -1));
 		if (!empty($registrosPagados)) {
 			foreach ($registrosPagados as $pagados) {
 				$listPagados[] = $pagados["Recaudacione"];
 			}
 		}
-
+		// Respalda pagos realizados en historico
 		if (!empty($listPagados)) {
 			$this->HistoricoPago->saveAll($listPagados);
 		}
-
+		// Elimina pagos realizados de pendientes
 		$this->Recaudacione->deleteAll(array('Recaudacione.estado' => 1), false);
 
 		$this->set("respuesta", $respuesta);
@@ -568,7 +575,7 @@ class RecaudacionesController extends AppController
 					"contrato_id" => intval($pago["HistoricoPago"]["contrato_id"]),
 					"tipo_contrato" => $tipoContratos[$pago["Contrato"]["tipo_contrato_id"]],
 					"tipo_documento" => $pago["TipoDocumento"]["nombre"],
-					//"forma_pago" => $pago["FormaPago"]["nombre"],
+					"forma_pago" => $pago["FormaPago"]["nombre"],
 					"ds_estado" => $pago["HistoricoPago"]["estado"] == 1 ? 'Pagado' : 'Adeudado'
 				));
 			}

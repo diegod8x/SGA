@@ -59,6 +59,7 @@ class ContratosController extends AppController
 		$this->loadModel("Cliente");
 		$this->loadModel("NumeroCuota");
 		$this->loadModel("Comuna");
+		$this->loadModel("Recaudacione");
 		$this->loadModel("Regione");
 		$edit = false;
 
@@ -67,6 +68,7 @@ class ContratosController extends AppController
 		if ($this->request->is('post')) {
 
 			if (array_key_exists("id", $this->request->data["Contrato"])) {
+				// Actualizar contrato
 				$edit = true;
 				$this->request->data["Contrato"]["modified_user"] = $this->Session->read("Users.usuario");
 				unset($this->request->data["NumeroCuota"]);
@@ -74,6 +76,7 @@ class ContratosController extends AppController
 				unset($this->request->data["TipoContrato"]);
 				unset($this->request->data["Direccione"]);
 			} else {
+				// Crear contrato
 				$this->request->data["Contrato"]["created_user"] = $this->Session->read("Users.usuario");
 			}
 
@@ -94,10 +97,29 @@ class ContratosController extends AppController
 			}
 
 			$this->Producto->saveAll($productosActualizados);
-			//pr($this->request->data);
+			// pr($productosActualizados);
+			// pr($this->request->data);
 			//exit;
 
+			// Guarda Contrato + Productos
 			if ($this->Contrato->saveAssociated($this->request->data, array('deep' => true))) {
+
+				// Guarda cuotas Contrato Venta Nuevo
+				if (!$edit && $this->request->data["Contrato"]["tipo_contrato_id"] == 2) {
+					// pr($this->request->data["Contrato"]);
+					$cuotas = $this->cuotasContratoVenta($this->request->data);
+					$cuotasContrato = array();
+					foreach ($cuotas as $key => $cuota) {
+						$cuota["contrato_id"] = $this->Contrato->id;
+						$cuotasContrato[] = $cuota;
+					}
+					// pr($cuotasContrato);
+					if (!empty($cuotasContrato)) {
+						$this->Recaudacione->saveAll($cuotasContrato);
+					}
+				}
+
+
 				$respuesta = array(
 					"estado" => 1,
 					"mensaje" => "Registrado correctamente",
@@ -111,6 +133,7 @@ class ContratosController extends AppController
 				);
 			}
 
+			// Contrato Arriendo Nuevo
 			if ($respuesta["estado"] == 1 && isset($this->request->data["Contrato"]["cliente_id"]) && !$edit) {
 
 				$contrato = $this->Contrato->find('first', array("conditions" => array("Contrato.id" => $this->Contrato->id)));
@@ -129,6 +152,7 @@ class ContratosController extends AppController
 				if (isset($contrato["Cliente"]["email3"]) && trim($contrato["Cliente"]["email3"]) != '') {
 					$correosCliente[] = $contrato["Cliente"]["email3"];
 				}
+				// Envío correo
 				//$correosCliente = NULL;
 				if (!empty($correosCliente)) {
 					$Email = new CakeEmail("gmail");
@@ -181,6 +205,97 @@ class ContratosController extends AppController
 			);
 		}
 		$this->set("respuesta", $respuesta);
+	}
+
+	public function cuotasContratoVenta($contrato)
+	{
+		$timeZome = timezone_open('America/Santiago');
+		$date = new DateTime();
+		$date->setTimezone($timeZome);
+		$cuotasContrato = array();
+		//cuotas
+		$acumulado = 0;
+		$i = 1;
+		$mesCobroCuota = date("Y-m");
+		$nroCuotas = $this->NumeroCuota->find("list");
+
+		$totalCobrado = $contrato["Contrato"]["subtotal"];
+
+		// Primeras cuotas / total menos ultima
+		$totalCobrado = $totalCobrado + $contrato["Contrato"]["costo_despacho"];
+		$totalCobrado = $totalCobrado - $contrato["Contrato"]["descuento"];
+		// Garantia
+		$totalCobrado = $totalCobrado + $contrato["Contrato"]["garantia"];
+		//pr($nroCuotas[$contrato["Contrato"]["numero_cuota_id"]]);
+		for ($i = 1; $i < $nroCuotas[$contrato["Contrato"]["numero_cuota_id"]]; $i++) {
+			if (($contrato["Contrato"]["fecha_cobro"] <= $date->format("d") || $contrato["Contrato"]["fecha_cobro"] <= $date->format("j")) && $i == 1) {
+				// Cuota 1
+				$montoCuota = round($totalCobrado / $nroCuotas[$contrato["Contrato"]["numero_cuota_id"]]);
+			} else {
+				// Cuotas siguientes
+				$time = strtotime((string) $mesCobroCuota . '-01');
+				$mesCobroCuota = date("Y-m", strtotime("+1 month", $time));
+				$montoCuota = round($totalCobrado / $nroCuotas[$contrato["Contrato"]["numero_cuota_id"]]);
+			}
+
+			$fechaCobroCuota = $mesCobroCuota . "-" . $contrato["Contrato"]["fecha_cobro"];
+			$acumulado = $acumulado + $montoCuota;
+			// if (!in_array($contrato["Contrato"]["id"], $pagosDelDia))
+			$cuotasContrato[] = array(
+				"contrato_id" 			=> null, /*$contrato["Contrato"]["id"],*/
+				"cliente_id" 			=> $contrato["Contrato"]["cliente_id"],
+				"fecha_cobro" 			=> $fechaCobroCuota,
+				"mes_cobro" 			=> date("Ym", strtotime((string)$fechaCobroCuota)),
+				"fecha_pago" 			=> null,
+				"estado" 				=> 0,
+				"cantidad_productos" 	=> $contrato["Contrato"]["cantidad_productos"],
+				"subtotal" 				=> $contrato["Contrato"]["subtotal"],
+				"despacho" 				=> ($i == 1) ? $contrato["Contrato"]["costo_despacho"] : 0, //($contrato["Contrato"]["cobrar_despacho"] == 1 && $i == 1) ? $contrato["Contrato"]["costo_despacho"] : 0,
+				"garantia" 				=> ($i == 1) ? $contrato["Contrato"]["garantia"] : 0, //($i == 1) ? $contrato["Contrato"]["garantia"] : 0,
+				"descuento" 			=> ($i == 1) ? $contrato["Contrato"]["descuento"] : 0, //($contrato["Contrato"]["cobrar_descuento"] == 1 && $i == 1) ? $contrato["Contrato"]["descuento"] : 0,
+				"total_cobrado"			=> $montoCuota,
+				"total_pagado"			=> 0,
+				"tipo_documento_id" 	=> null,
+				"nro_documento" 		=> null,
+				"comentarios" 			=> "Cuota " . $i . "/" . $nroCuotas[$contrato["Contrato"]["numero_cuota_id"]],
+			);
+		}
+		// pr("última cuota");
+		// Última cuota
+		$time = strtotime($mesCobroCuota . '-01');
+		if ($nroCuotas[$contrato["Contrato"]["numero_cuota_id"]] > 1) {
+			$mesCobroCuota = date("Y-m", strtotime("+1 month", $time));
+		}
+
+		$fechaCobroCuota = $mesCobroCuota . "-" . $contrato["Contrato"]["fecha_cobro"];
+		$montoCuota = $totalCobrado - $acumulado;
+		// pr($fechaCobroCuota);
+		// pr($montoCuota);
+		// pr("termina");
+		//exit;
+
+		// if (!in_array($contrato["Contrato"]["id"], $pagosDelDia)) {
+		$cuotasContrato[] = array(
+			"contrato_id" 			=> null, /*$contrato["Contrato"]["id"],*/
+			"cliente_id" 			=> $contrato["Contrato"]["cliente_id"],
+			"fecha_cobro" 			=> $fechaCobroCuota,
+			"mes_cobro" 			=> date("Ym", strtotime((string)$fechaCobroCuota)),
+			"fecha_pago" 			=> null,
+			"estado" 				=> 0,
+			"cantidad_productos" 	=> $contrato["Contrato"]["cantidad_productos"],
+			"subtotal" 				=> $contrato["Contrato"]["subtotal"],
+			"despacho" 				=> ($nroCuotas[$contrato["Contrato"]["numero_cuota_id"]] == 1) ?  $contrato["Contrato"]["costo_despacho"] : 0,
+			"garantia" 				=> ($nroCuotas[$contrato["Contrato"]["numero_cuota_id"]] == 1) ? $contrato["Contrato"]["garantia"] : 0,
+			"descuento" 			=> ($nroCuotas[$contrato["Contrato"]["numero_cuota_id"]] == 1) ? $contrato["Contrato"]["descuento"] : 0,
+			"total_cobrado"			=> $montoCuota,
+			"total_pagado"			=> 0,
+			"tipo_documento_id" 	=> null,
+			"nro_documento" 		=> null,
+			"comentarios" 			=> "Cuota " . $nroCuotas[$contrato["Contrato"]["numero_cuota_id"]] . "/" . $nroCuotas[$contrato["Contrato"]["numero_cuota_id"]],
+		);
+		// }
+		// pr($cuotasContrato);
+		return $cuotasContrato;
 	}
 
 	public function data_json()
